@@ -1,5 +1,7 @@
 <script setup>
 import { ref, computed, onUnmounted } from 'vue'
+import ChordDiagram from './ChordDiagram.vue'
+import { RELATED_CHORDS, CHORD_VOICINGS } from '../data/chordData.js'
 
 const props = defineProps({ exercise: { type: Object, required: true } })
 const emit = defineEmits(['back', 'customize'])
@@ -199,6 +201,23 @@ const currentNoteInfo = computed(() => {
   return note ? midiToName(note.midi) : ''
 })
 
+// Unique related chords that aren't already in the exercise progression
+const relatedChords = computed(() => {
+  if (props.exercise.type !== 'chords') return []
+  const inSequence = new Set(props.exercise.settings.chords ?? [])
+  const seen = new Set()
+  const result = []
+  for (const chord of inSequence) {
+    for (const rel of (RELATED_CHORDS[chord] ?? [])) {
+      if (!inSequence.has(rel) && !seen.has(rel) && CHORD_VOICINGS[rel]) {
+        seen.add(rel)
+        result.push(rel)
+      }
+    }
+  }
+  return result.slice(0, 6)
+})
+
 onUnmounted(() => {
   stopEngine()
   audioCtx?.close()
@@ -287,8 +306,39 @@ onUnmounted(() => {
       </div>
     </div>
 
+    <!-- Chord diagrams on fretboard (chords exercise) -->
+    <div v-if="exercise.type === 'chords'" class="view-card">
+      <div class="section-header">
+        <h3 class="section-title">Chord Diagrams</h3>
+        <span class="section-hint">Tap a voicing tab to see inversions</span>
+      </div>
+      <div class="chord-diagrams-row">
+        <ChordDiagram
+          v-for="(chord, i) in exercise.settings.chords"
+          :key="chord + i"
+          :chord="chord"
+          :active="currentChordIdx === i"
+        />
+      </div>
+    </div>
+
+    <!-- Related chords that go well together (chords exercise) -->
+    <div v-if="exercise.type === 'chords' && relatedChords.length" class="view-card">
+      <div class="section-header">
+        <h3 class="section-title">Chords That Go Well Together</h3>
+        <span class="section-hint">Common companions for this progression</span>
+      </div>
+      <div class="chord-diagrams-row">
+        <ChordDiagram
+          v-for="chord in relatedChords"
+          :key="chord"
+          :chord="chord"
+        />
+      </div>
+    </div>
+
     <!-- Fingerpicking / Barre info -->
-    <div v-else class="view-card">
+    <div v-if="exercise.type === 'fingerpicking' || exercise.type === 'barre'" class="view-card">
       <h3 class="section-title" style="margin-bottom:12px">Exercise Details</h3>
       <div v-if="exercise.type === 'fingerpicking'" class="detail-row">
         <span class="detail-label">Pattern</span>
@@ -545,6 +595,13 @@ onUnmounted(() => {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
+}
+
+/* ── Chord diagrams row ── */
+.chord-diagrams-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
 }
 .chord-box {
   display: flex;
