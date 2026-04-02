@@ -2,7 +2,7 @@
 defineProps({
   exercise: { type: Object, required: true }
 })
-defineEmits(['customize'])
+defineEmits(['customize', 'view'])
 
 const typeLabels = {
   scale: 'Scale',
@@ -34,6 +34,9 @@ function settingsSummary(exercise) {
       <span class="settings-text">{{ settingsSummary(exercise) }}</span>
     </div>
     <div class="card-footer">
+      <button class="btn btn-primary" @click="$emit('view', exercise)">
+        ▶ Practice
+      </button>
       <button class="btn btn-amber" @click="$emit('customize', exercise)">
         ✎ Customize
       </button>
@@ -123,5 +126,8 @@ function settingsSummary(exercise) {
 
 .card-footer {
   padding-top: 4px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 </style>

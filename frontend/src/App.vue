@@ -2,12 +2,13 @@
 import { ref, onMounted } from 'vue'
 import ExerciseList from './components/ExerciseList.vue'
 import ExerciseCustomizer from './components/ExerciseCustomizer.vue'
+import ExerciseView from './components/ExerciseView.vue'
 import { getExercises } from './services/api.js'
 
 const exercises = ref([])
 const loading = ref(true)
 const error = ref(null)
-const currentView = ref('list') // 'list' | 'customize'
+const currentView = ref('list') // 'list' | 'customize' | 'view'
 const selectedExercise = ref(null)
 const toast = ref(null)
 let toastTimer = null
@@ -34,6 +35,11 @@ function showToast(msg) {
 function onCustomize(exercise) {
   selectedExercise.value = exercise
   currentView.value = 'customize'
+}
+
+function onView(exercise) {
+  selectedExercise.value = exercise
+  currentView.value = 'view'
 }
 
 async function onSaved() {
@@ -66,7 +72,7 @@ onMounted(fetchExercises)
             <p class="logo-sub">Build your skills, one exercise at a time</p>
           </div>
         </div>
-        <nav class="header-nav" v-if="currentView === 'customize'">
+        <nav class="header-nav" v-if="currentView !== 'list'">
           <button class="btn btn-secondary" @click="onBack">
             ← Back to Exercises
           </button>
@@ -84,6 +90,13 @@ onMounted(fetchExercises)
         <ExerciseList
           v-if="currentView === 'list'"
           :exercises="exercises"
+          @customize="onCustomize"
+          @view="onView"
+        />
+        <ExerciseView
+          v-else-if="currentView === 'view'"
+          :exercise="selectedExercise"
+          @back="onBack"
           @customize="onCustomize"
         />
         <ExerciseCustomizer
