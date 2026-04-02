@@ -21,7 +21,17 @@ const scaleTypes = [
   { value: 'minor', label: 'Minor' },
   { value: 'pentatonic_minor', label: 'Pentatonic Minor' },
   { value: 'pentatonic_major', label: 'Pentatonic Major' },
-  { value: 'blues', label: 'Blues' }
+  { value: 'blues', label: 'Blues' },
+  { value: 'dorian', label: 'Dorian' },
+  { value: 'phrygian', label: 'Phrygian' },
+  { value: 'lydian', label: 'Lydian' },
+  { value: 'mixolydian', label: 'Mixolydian' },
+  { value: 'locrian', label: 'Locrian' },
+  { value: 'harmonic_minor', label: 'Harmonic Minor' },
+  { value: 'melodic_minor', label: 'Melodic Minor' },
+  { value: 'whole_tone', label: 'Whole Tone' },
+  { value: 'diminished', label: 'Diminished' },
+  { value: 'hungarian_minor', label: 'Hungarian Minor' }
 ]
 
 // Chord management

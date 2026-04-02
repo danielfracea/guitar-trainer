@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 import ChordDiagram from './ChordDiagram.vue'
 import { RELATED_CHORDS, CHORD_VOICINGS } from '../data/chordData.js'
 
@@ -10,28 +10,56 @@ const emit = defineEmits(['back', 'customize'])
 const NOTE_TO_ST = { C:0,'C#':1,D:2,'D#':3,E:4,F:5,'F#':6,G:7,'G#':8,A:9,'A#':10,B:11 }
 const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B']
 const SCALE_INTERVALS = {
-  major:           [0,2,4,5,7,9,11],
-  minor:           [0,2,3,5,7,8,10],
-  pentatonic_minor:[0,3,5,7,10],
-  pentatonic_major:[0,2,4,7,9],
-  blues:           [0,3,5,6,7,10]
+  major:            [0,2,4,5,7,9,11],
+  minor:            [0,2,3,5,7,8,10],
+  pentatonic_minor: [0,3,5,7,10],
+  pentatonic_major: [0,2,4,7,9],
+  blues:            [0,3,5,6,7,10],
+  dorian:           [0,2,3,5,7,9,10],
+  phrygian:         [0,1,3,5,7,8,10],
+  lydian:           [0,2,4,6,7,9,11],
+  mixolydian:       [0,2,4,5,7,9,10],
+  locrian:          [0,1,3,5,6,8,10],
+  harmonic_minor:   [0,2,3,5,7,8,11],
+  melodic_minor:    [0,2,3,5,7,9,11],
+  whole_tone:       [0,2,4,6,8,10],
+  diminished:       [0,1,3,4,6,7,9,10],
+  hungarian_minor:  [0,2,3,6,7,8,11]
 }
 const SCALE_LABELS = {
   major:'Major', minor:'Minor',
   pentatonic_minor:'Pentatonic Minor', pentatonic_major:'Pentatonic Major',
-  blues:'Blues'
+  blues:'Blues',
+  dorian:'Dorian', phrygian:'Phrygian', lydian:'Lydian',
+  mixolydian:'Mixolydian', locrian:'Locrian',
+  harmonic_minor:'Harmonic Minor', melodic_minor:'Melodic Minor',
+  whole_tone:'Whole Tone', diminished:'Diminished', hungarian_minor:'Hungarian Minor'
 }
 // String index 0 = high e, index 5 = low E
 const STRING_MIDI   = [64, 59, 55, 50, 45, 40]
 const STRING_LABELS = ['e', 'B', 'G', 'D', 'A', 'E']
 const TYPE_LABELS   = { scale:'Scale', chords:'Chords', fingerpicking:'Fingerpicking', barre:'Barre' }
 
+// ── Box (position) navigation ─────────────────────────────────────────────────
+const boxStart = ref(0)
+
+watch(
+  () => props.exercise.settings?.positions,
+  (p) => {
+    const pos = Array.isArray(p) ? p[0] : (p ?? 1)
+    boxStart.value = Math.max(0, pos - 1)
+  },
+  { immediate: true }
+)
+
+function prevBox() { if (boxStart.value > 0) { boxStart.value = Math.max(0, boxStart.value - 2) } }
+function nextBox() { boxStart.value += 2 }
+
 // ── Tab data (scale exercises only) ──────────────────────────────────────────
 const tabData = computed(() => {
   if (props.exercise.type !== 'scale') return null
-  const { rootNote, scaleType, positions } = props.exercise.settings
-  const pos       = Array.isArray(positions) ? positions[0] : (positions ?? 1)
-  const startFret = Math.max(0, pos - 1)
+  const { rootNote, scaleType } = props.exercise.settings
+  const startFret = boxStart.value
   const endFret   = startFret + 5
   const root      = NOTE_TO_ST[rootNote] ?? 0
   const intervals = SCALE_INTERVALS[scaleType] ?? SCALE_INTERVALS.major
@@ -46,12 +74,16 @@ const tabData = computed(() => {
     })
   )
 
-  // Play sequence: string 5→0 (low E to high e), ascending fret on each string
+  // Play sequence: string 5→0 (low E to high e), ascending fret; skip duplicate MIDI pitches
+  const seenMidi = new Set()
   const seq = []
   for (let si = 5; si >= 0; si--) {
     for (const fret of frets) {
       const midi = STRING_MIDI[si] + fret
-      if (scaleSet.has(midi % 12)) seq.push({ si, fret, midi })
+      if (scaleSet.has(midi % 12) && !seenMidi.has(midi)) {
+        seenMidi.add(midi)
+        seq.push({ si, fret, midi })
+      }
     }
   }
 
@@ -69,6 +101,13 @@ const isPlaying    = ref(false)
 const isMetronome  = ref(false)
 const currentNoteIdx = ref(-1)
 const beatCount    = ref(0)
+const volume       = ref(100)
+const localTempo   = ref(props.exercise.settings.tempo ?? 60)
+
+watch(
+  () => props.exercise.settings.tempo,
+  t => { localTempo.value = t ?? 60 }
+)
 
 function getCtx() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)()
@@ -86,7 +125,8 @@ function emitClick(ctx, time, accent) {
   g.connect(ctx.destination)
   osc.type = 'sine'
   osc.frequency.value = accent ? 1400 : 900
-  g.gain.setValueAtTime(accent ? 0.5 : 0.25, time)
+  const vol = volume.value / 100
+  g.gain.setValueAtTime((accent ? 0.5 : 0.25) * vol, time)
   g.gain.exponentialRampToValueAtTime(0.0001, time + 0.05)
   osc.start(time)
   osc.stop(time + 0.06)
@@ -99,7 +139,8 @@ function emitTone(ctx, midi, time, dur) {
   g.connect(ctx.destination)
   osc.type = 'triangle'
   osc.frequency.value = midiToFreq(midi)
-  g.gain.setValueAtTime(0.3, time)
+  const vol = volume.value / 100
+  g.gain.setValueAtTime(0.3 * vol, time)
   g.gain.setTargetAtTime(0, time + dur * 0.4, dur * 0.15)
   osc.start(time)
   osc.stop(time + dur)
@@ -109,7 +150,7 @@ function schedule() {
   if (!audioCtx) return
   const ctx = audioCtx
   // Seconds per beat at the current tempo
-  const beatDuration = 60 / (props.exercise.settings.tempo ?? 60)
+  const beatDuration = 60 / localTempo.value
   const seq = tabData.value?.seq
 
   // Schedule up to 200ms ahead — standard Web Audio lookahead to avoid gaps
@@ -247,6 +288,11 @@ onUnmounted(() => {
         <h3 class="section-title">
           {{ exercise.settings.rootNote }} {{ SCALE_LABELS[exercise.settings.scaleType] }} Scale
         </h3>
+        <div class="box-nav">
+          <button class="btn btn-secondary btn-box-nav" @click="prevBox" :disabled="boxStart === 0" title="Previous box">◀</button>
+          <span class="box-label">Frets {{ tabData.frets[0] }}–{{ tabData.frets[tabData.frets.length - 1] }}</span>
+          <button class="btn btn-secondary btn-box-nav" @click="nextBox" title="Next box">▶</button>
+        </div>
         <span class="section-hint">Click a note to hear it</span>
       </div>
 
@@ -354,32 +400,47 @@ onUnmounted(() => {
 
     <!-- Controls -->
     <div class="view-card controls-card">
-      <div class="tempo-display">
-        <span class="tempo-num">{{ exercise.settings.tempo }}</span>
-        <span class="tempo-label">BPM</span>
+      <div class="controls-row">
+        <div class="tempo-display">
+          <span class="tempo-num">{{ localTempo }}</span>
+          <span class="tempo-label">BPM</span>
+        </div>
+
+        <div class="ctrl-buttons">
+          <button
+            :class="['btn', 'ctrl-btn', isMetronome ? 'btn-primary' : 'btn-secondary']"
+            @click="toggleMetronome"
+          >
+            {{ isMetronome ? '⏸ Metronome On' : '🎵 Metronome' }}
+          </button>
+          <button
+            v-if="tabData"
+            :class="['btn', 'ctrl-btn', isPlaying ? 'btn-danger' : 'btn-amber']"
+            @click="togglePlay"
+          >
+            {{ isPlaying ? '■ Stop' : '▶ Play Scale' }}
+          </button>
+        </div>
+
+        <div v-if="currentNoteInfo" class="status-bar status-note">
+          ♩ {{ currentNoteInfo }}
+        </div>
+        <div v-else-if="isMetronome || isPlaying" class="status-bar status-beat">
+          Beat {{ (beatCount % 4) + 1 }}
+        </div>
       </div>
 
-      <div class="ctrl-buttons">
-        <button
-          :class="['btn', 'ctrl-btn', isMetronome ? 'btn-primary' : 'btn-secondary']"
-          @click="toggleMetronome"
-        >
-          {{ isMetronome ? '⏸ Metronome On' : '🎵 Metronome' }}
-        </button>
-        <button
-          v-if="tabData"
-          :class="['btn', 'ctrl-btn', isPlaying ? 'btn-danger' : 'btn-amber']"
-          @click="togglePlay"
-        >
-          {{ isPlaying ? '■ Stop' : '▶ Play Scale' }}
-        </button>
-      </div>
-
-      <div v-if="currentNoteInfo" class="status-bar status-note">
-        ♩ {{ currentNoteInfo }}
-      </div>
-      <div v-else-if="isMetronome || isPlaying" class="status-bar status-beat">
-        Beat {{ (beatCount % 4) + 1 }}
+      <div class="controls-sliders">
+        <div class="slider-group">
+          <label for="speed-slider" class="slider-label">Speed</label>
+          <input id="speed-slider" type="range" v-model.number="localTempo" min="40" max="200" step="1" class="ctrl-slider" />
+          <span class="slider-value">{{ localTempo }} BPM</span>
+        </div>
+        <div class="slider-group">
+          <label for="volume-slider" class="slider-label">Volume</label>
+          <input id="volume-slider" type="range" v-model.number="volume" min="0" max="100" step="1" class="ctrl-slider" />
+          <span class="slider-value">{{ volume }}%</span>
+        </div>
       </div>
     </div>
 
@@ -441,8 +502,10 @@ onUnmounted(() => {
 /* ── Section header ── */
 .section-header {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-bottom: 20px;
 }
 .section-title {
@@ -453,6 +516,24 @@ onUnmounted(() => {
 .section-hint {
   font-size: 0.75rem;
   color: var(--text-muted);
+}
+
+/* ── Box navigation ── */
+.box-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.btn-box-nav {
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  line-height: 1;
+}
+.box-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  min-width: 72px;
+  text-align: center;
 }
 
 /* ── Fretboard ── */
@@ -668,6 +749,11 @@ onUnmounted(() => {
 /* ── Controls card ── */
 .controls-card {
   display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.controls-row {
+  display: flex;
   align-items: center;
   gap: 24px;
   flex-wrap: wrap;
@@ -720,5 +806,40 @@ onUnmounted(() => {
   background: rgba(76,175,80,0.1);
   border: 1px solid rgba(76,175,80,0.25);
   color: var(--accent-green);
+}
+
+/* ── Sliders ── */
+.controls-sliders {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.slider-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 200px;
+}
+.slider-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+  min-width: 50px;
+}
+.ctrl-slider {
+  flex: 1;
+  accent-color: var(--accent-amber);
+  cursor: pointer;
+  height: 4px;
+}
+.slider-value {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--accent-amber);
+  min-width: 60px;
+  text-align: right;
 }
 </style>
