@@ -99,6 +99,13 @@ const isPlaying    = ref(false)
 const isMetronome  = ref(false)
 const currentNoteIdx = ref(-1)
 const beatCount    = ref(0)
+const volume       = ref(100)
+const localTempo   = ref(props.exercise.settings.tempo ?? 60)
+
+watch(
+  () => props.exercise.settings.tempo,
+  t => { localTempo.value = t ?? 60 }
+)
 
 function getCtx() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)()
@@ -116,7 +123,8 @@ function emitClick(ctx, time, accent) {
   g.connect(ctx.destination)
   osc.type = 'sine'
   osc.frequency.value = accent ? 1400 : 900
-  g.gain.setValueAtTime(accent ? 0.5 : 0.25, time)
+  const vol = volume.value / 100
+  g.gain.setValueAtTime((accent ? 0.5 : 0.25) * vol, time)
   g.gain.exponentialRampToValueAtTime(0.0001, time + 0.05)
   osc.start(time)
   osc.stop(time + 0.06)
@@ -129,7 +137,8 @@ function emitTone(ctx, midi, time, dur) {
   g.connect(ctx.destination)
   osc.type = 'triangle'
   osc.frequency.value = midiToFreq(midi)
-  g.gain.setValueAtTime(0.3, time)
+  const vol = volume.value / 100
+  g.gain.setValueAtTime(0.3 * vol, time)
   g.gain.setTargetAtTime(0, time + dur * 0.4, dur * 0.15)
   osc.start(time)
   osc.stop(time + dur)
@@ -139,7 +148,7 @@ function schedule() {
   if (!audioCtx) return
   const ctx = audioCtx
   // Seconds per beat at the current tempo
-  const beatDuration = 60 / (props.exercise.settings.tempo ?? 60)
+  const beatDuration = 60 / localTempo.value
   const seq = tabData.value?.seq
 
   // Schedule up to 200ms ahead — standard Web Audio lookahead to avoid gaps
@@ -341,32 +350,47 @@ onUnmounted(() => {
 
     <!-- Controls -->
     <div class="view-card controls-card">
-      <div class="tempo-display">
-        <span class="tempo-num">{{ exercise.settings.tempo }}</span>
-        <span class="tempo-label">BPM</span>
+      <div class="controls-row">
+        <div class="tempo-display">
+          <span class="tempo-num">{{ localTempo }}</span>
+          <span class="tempo-label">BPM</span>
+        </div>
+
+        <div class="ctrl-buttons">
+          <button
+            :class="['btn', 'ctrl-btn', isMetronome ? 'btn-primary' : 'btn-secondary']"
+            @click="toggleMetronome"
+          >
+            {{ isMetronome ? '⏸ Metronome On' : '🎵 Metronome' }}
+          </button>
+          <button
+            v-if="tabData"
+            :class="['btn', 'ctrl-btn', isPlaying ? 'btn-danger' : 'btn-amber']"
+            @click="togglePlay"
+          >
+            {{ isPlaying ? '■ Stop' : '▶ Play Scale' }}
+          </button>
+        </div>
+
+        <div v-if="currentNoteInfo" class="status-bar status-note">
+          ♩ {{ currentNoteInfo }}
+        </div>
+        <div v-else-if="isMetronome || isPlaying" class="status-bar status-beat">
+          Beat {{ (beatCount % 4) + 1 }}
+        </div>
       </div>
 
-      <div class="ctrl-buttons">
-        <button
-          :class="['btn', 'ctrl-btn', isMetronome ? 'btn-primary' : 'btn-secondary']"
-          @click="toggleMetronome"
-        >
-          {{ isMetronome ? '⏸ Metronome On' : '🎵 Metronome' }}
-        </button>
-        <button
-          v-if="tabData"
-          :class="['btn', 'ctrl-btn', isPlaying ? 'btn-danger' : 'btn-amber']"
-          @click="togglePlay"
-        >
-          {{ isPlaying ? '■ Stop' : '▶ Play Scale' }}
-        </button>
-      </div>
-
-      <div v-if="currentNoteInfo" class="status-bar status-note">
-        ♩ {{ currentNoteInfo }}
-      </div>
-      <div v-else-if="isMetronome || isPlaying" class="status-bar status-beat">
-        Beat {{ (beatCount % 4) + 1 }}
+      <div class="controls-sliders">
+        <div class="slider-group">
+          <label for="speed-slider" class="slider-label">Speed</label>
+          <input id="speed-slider" type="range" v-model.number="localTempo" min="40" max="200" step="1" class="ctrl-slider" />
+          <span class="slider-value">{{ localTempo }} BPM</span>
+        </div>
+        <div class="slider-group">
+          <label for="volume-slider" class="slider-label">Volume</label>
+          <input id="volume-slider" type="range" v-model.number="volume" min="0" max="100" step="1" class="ctrl-slider" />
+          <span class="slider-value">{{ volume }}%</span>
+        </div>
       </div>
     </div>
 
@@ -668,6 +692,11 @@ onUnmounted(() => {
 /* ── Controls card ── */
 .controls-card {
   display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.controls-row {
+  display: flex;
   align-items: center;
   gap: 24px;
   flex-wrap: wrap;
@@ -720,5 +749,40 @@ onUnmounted(() => {
   background: rgba(76,175,80,0.1);
   border: 1px solid rgba(76,175,80,0.25);
   color: var(--accent-green);
+}
+
+/* ── Sliders ── */
+.controls-sliders {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.slider-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 200px;
+}
+.slider-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+  min-width: 50px;
+}
+.ctrl-slider {
+  flex: 1;
+  accent-color: var(--accent-amber);
+  cursor: pointer;
+  height: 4px;
+}
+.slider-value {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--accent-amber);
+  min-width: 60px;
+  text-align: right;
 }
 </style>
