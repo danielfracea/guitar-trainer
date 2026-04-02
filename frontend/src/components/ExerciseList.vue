@@ -4,7 +4,7 @@ import ExerciseCard from './ExerciseCard.vue'
 defineProps({
   exercises: { type: Array, required: true }
 })
-defineEmits(['customize'])
+defineEmits(['customize', 'view'])
 </script>
 
 <template>
@@ -24,6 +24,7 @@ defineEmits(['customize'])
         :key="exercise.id"
         :exercise="exercise"
         @customize="$emit('customize', exercise)"
+        @view="$emit('view', exercise)"
       />
     </div>
   </div>
