@@ -79,7 +79,7 @@ function cancelEditing() {
 async function saveNotes(session) {
   savingId.value = session.id
   try {
-    await updateSession(session.id, { notes: editNotes[session.id], mood: session.mood, totalDuration: session.totalDuration, completed: session.completed })
+    await updateSession(session.id, { notes: editNotes[session.id] })
     session.notes = editNotes[session.id]
     editingId.value = null
   } catch {

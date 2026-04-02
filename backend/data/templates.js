@@ -6,9 +6,10 @@ const defaultTemplates = [
     totalDuration: 25,
     icon: "🌱",
     level: "Beginner",
+    tip: "Start slowly and focus on clean fingering before increasing speed",
     exercises: [
-      { exerciseId: 1, exerciseName: "Scale Practice", duration: 10, tip: "Start slowly and focus on clean fingering" },
-      { exerciseId: 2, exerciseName: "Chord Transitions", duration: 15, tip: "Aim for smooth, gap-free chord changes" }
+      { exerciseId: 1, exerciseName: "Scale Practice", duration: 10 },
+      { exerciseId: 2, exerciseName: "Chord Transitions", duration: 15 }
     ]
   },
   {
@@ -18,9 +19,10 @@ const defaultTemplates = [
     totalDuration: 20,
     icon: "🎵",
     level: "Intermediate",
+    tip: "Use a metronome and do not rush — smooth transitions beat fast ones",
     exercises: [
-      { exerciseId: 2, exerciseName: "Chord Transitions", duration: 10, tip: "Use a metronome and do not rush" },
-      { exerciseId: 4, exerciseName: "Barre Chord Practice", duration: 10, tip: "Press down firmly but avoid tension in your wrist" }
+      { exerciseId: 2, exerciseName: "Chord Transitions", duration: 10 },
+      { exerciseId: 4, exerciseName: "Barre Chord Practice", duration: 10 }
     ]
   },
   {
@@ -30,9 +32,10 @@ const defaultTemplates = [
     totalDuration: 25,
     icon: "⚡",
     level: "Intermediate",
+    tip: "Lock in with the metronome before increasing speed",
     exercises: [
-      { exerciseId: 1, exerciseName: "Scale Practice", duration: 10, tip: "Practice ascending and descending equally" },
-      { exerciseId: 5, exerciseName: "Pentatonic Runs", duration: 15, tip: "Lock in with the metronome before increasing speed" }
+      { exerciseId: 1, exerciseName: "Scale Practice", duration: 10 },
+      { exerciseId: 5, exerciseName: "Pentatonic Runs", duration: 15 }
     ]
   },
   {
@@ -42,9 +45,10 @@ const defaultTemplates = [
     totalDuration: 20,
     icon: "🖐️",
     level: "Intermediate",
+    tip: "Keep your thumb anchored on the bass strings for a steady pulse",
     exercises: [
-      { exerciseId: 3, exerciseName: "Fingerpicking Pattern", duration: 10, tip: "Keep your thumb anchored on the bass strings" },
-      { exerciseId: 2, exerciseName: "Chord Transitions", duration: 10, tip: "Try picking each chord arpeggiated instead of strumming" }
+      { exerciseId: 3, exerciseName: "Fingerpicking Pattern", duration: 10 },
+      { exerciseId: 2, exerciseName: "Chord Transitions", duration: 10 }
     ]
   },
   {
@@ -54,12 +58,13 @@ const defaultTemplates = [
     totalDuration: 45,
     icon: "🏆",
     level: "Advanced",
+    tip: "Warm up at a comfortable tempo and finish by improvising freely",
     exercises: [
-      { exerciseId: 1, exerciseName: "Scale Practice", duration: 10, tip: "Warm up at a comfortable tempo" },
-      { exerciseId: 2, exerciseName: "Chord Transitions", duration: 10, tip: "Run through all your common chord shapes" },
-      { exerciseId: 3, exerciseName: "Fingerpicking Pattern", duration: 8, tip: "Practice with eyes closed to develop feel" },
-      { exerciseId: 4, exerciseName: "Barre Chord Practice", duration: 7, tip: "Work on clean fretting before speed" },
-      { exerciseId: 5, exerciseName: "Pentatonic Runs", duration: 10, tip: "Finish with something fun — improvise freely" }
+      { exerciseId: 1, exerciseName: "Scale Practice", duration: 10 },
+      { exerciseId: 2, exerciseName: "Chord Transitions", duration: 10 },
+      { exerciseId: 3, exerciseName: "Fingerpicking Pattern", duration: 8 },
+      { exerciseId: 4, exerciseName: "Barre Chord Practice", duration: 7 },
+      { exerciseId: 5, exerciseName: "Pentatonic Runs", duration: 10 }
     ]
   }
 ];

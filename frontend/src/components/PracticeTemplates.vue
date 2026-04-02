@@ -92,8 +92,8 @@ onMounted(fetchTemplates)
           </li>
         </ul>
 
-        <div class="tip-box" v-if="template.exercises[0]">
-          💡 <em>{{ template.exercises[0].tip }}</em>
+        <div class="tip-box" v-if="template.tip">
+          💡 <em>{{ template.tip }}</em>
         </div>
 
         <button
