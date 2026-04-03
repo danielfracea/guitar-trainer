@@ -39,6 +39,7 @@ const SCALE_LABELS = {
 const STRING_MIDI   = [64, 59, 55, 50, 45, 40]
 const STRING_LABELS = ['e', 'B', 'G', 'D', 'A', 'E']
 const TYPE_LABELS   = { scale:'Scale', chords:'Chords', fingerpicking:'Fingerpicking', barre:'Barre' }
+const TONE_GAP_FACTOR = 0.9  // Each note plays for this fraction of its duration, leaving a slight gap
 const DURATION_OPTIONS = [
   { label: 'Whole',   value: 4    },
   { label: 'Half',    value: 2    },
@@ -200,7 +201,7 @@ function schedule() {
       const noteIndex = _noteIdx % seq.length
       const note = seq[noteIndex]
       const dur = noteDurations.value[noteIndex] ?? defaultNoteDuration.value
-      const toneDur = beatDuration * dur * 0.9
+      const toneDur = beatDuration * dur * TONE_GAP_FACTOR
       const delay = Math.max(0, (noteTime - ctx.currentTime) * 1000)
 
       emitTone(ctx, note.midi, noteTime, toneDur)
@@ -218,7 +219,6 @@ function startEngine() {
   if (schedulerTimer) return
   const ctx = getCtx()
   _beatIdx      = 0
-  _noteIdx      = 0
   nextBeatTime  = ctx.currentTime + 0.05
   _nextNoteTime = ctx.currentTime + 0.05
   // Poll every 25ms — standard Web Audio scheduling interval for smooth playback
