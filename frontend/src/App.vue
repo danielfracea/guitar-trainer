@@ -1,17 +1,24 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import ExerciseList from './components/ExerciseList.vue'
 import ExerciseCustomizer from './components/ExerciseCustomizer.vue'
 import ExerciseView from './components/ExerciseView.vue'
+import PracticeTemplates from './components/PracticeTemplates.vue'
+import PracticeJournal from './components/PracticeJournal.vue'
 import { getExercises } from './services/api.js'
 
 const exercises = ref([])
 const loading = ref(true)
 const error = ref(null)
-const currentView = ref('list') // 'list' | 'customize' | 'view'
+// top-level tabs: 'exercises' | 'templates' | 'journal'
+const activeTab = ref('exercises')
+// sub-view within exercises tab: 'list' | 'customize' | 'view'
+const currentView = ref('list')
 const selectedExercise = ref(null)
 const toast = ref(null)
 let toastTimer = null
+
+const isSubView = computed(() => currentView.value !== 'list')
 
 async function fetchExercises() {
   loading.value = true
@@ -58,6 +65,17 @@ function onBack() {
   currentView.value = 'list'
 }
 
+function onSessionLogged(templateName) {
+  showToast(`✓ Session logged: ${templateName}`)
+}
+
+function switchTab(tab) {
+  if (isSubView.value && tab !== 'exercises') {
+    currentView.value = 'list'
+  }
+  activeTab.value = tab
+}
+
 onMounted(fetchExercises)
 </script>
 
@@ -72,41 +90,74 @@ onMounted(fetchExercises)
             <p class="logo-sub">Build your skills, one exercise at a time</p>
           </div>
         </div>
-        <nav class="header-nav" v-if="currentView !== 'list'">
-          <button class="btn btn-secondary" @click="onBack">
-            ← Back to Exercises
-          </button>
+        <nav class="header-nav">
+          <template v-if="isSubView && activeTab === 'exercises'">
+            <button class="btn btn-secondary" @click="onBack">
+              ← Back to Exercises
+            </button>
+          </template>
+          <template v-else>
+            <button
+              class="tab-btn"
+              :class="{ active: activeTab === 'exercises' }"
+              @click="switchTab('exercises')"
+            >🎸 Exercises</button>
+            <button
+              class="tab-btn"
+              :class="{ active: activeTab === 'templates' }"
+              @click="switchTab('templates')"
+            >📋 Templates</button>
+            <button
+              class="tab-btn"
+              :class="{ active: activeTab === 'journal' }"
+              @click="switchTab('journal')"
+            >📓 Journal</button>
+          </template>
         </nav>
       </div>
     </header>
 
     <main class="app-main">
-      <div v-if="loading" class="loading">
-        <div class="spinner"></div>
-        Loading exercises…
-      </div>
-      <div v-else-if="error" class="error-message">{{ error }}</div>
-      <template v-else>
-        <ExerciseList
-          v-if="currentView === 'list'"
-          :exercises="exercises"
-          @customize="onCustomize"
-          @view="onView"
-        />
-        <ExerciseView
-          v-else-if="currentView === 'view'"
-          :exercise="selectedExercise"
-          @back="onBack"
-          @customize="onCustomize"
-        />
-        <ExerciseCustomizer
-          v-else-if="currentView === 'customize'"
-          :exercise="selectedExercise"
-          @saved="onSaved"
-          @reset="onReset"
-          @back="onBack"
-        />
+      <!-- Exercises Tab -->
+      <template v-if="activeTab === 'exercises'">
+        <div v-if="loading" class="loading">
+          <div class="spinner"></div>
+          Loading exercises…
+        </div>
+        <div v-else-if="error" class="error-message">{{ error }}</div>
+        <template v-else>
+          <ExerciseList
+            v-if="currentView === 'list'"
+            :exercises="exercises"
+            @customize="onCustomize"
+            @view="onView"
+          />
+          <ExerciseView
+            v-else-if="currentView === 'view'"
+            :exercise="selectedExercise"
+            @back="onBack"
+            @customize="onCustomize"
+          />
+          <ExerciseCustomizer
+            v-else-if="currentView === 'customize'"
+            :exercise="selectedExercise"
+            @saved="onSaved"
+            @reset="onReset"
+            @back="onBack"
+          />
+        </template>
       </template>
+
+      <!-- Templates Tab -->
+      <PracticeTemplates
+        v-else-if="activeTab === 'templates'"
+        @session-logged="onSessionLogged"
+      />
+
+      <!-- Journal Tab -->
+      <PracticeJournal
+        v-else-if="activeTab === 'journal'"
+      />
     </main>
 
     <Transition name="toast">
@@ -168,6 +219,35 @@ onMounted(fetchExercises)
   max-width: 1100px;
   margin: 0 auto;
   padding: 36px 24px;
+}
+
+.header-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tab-btn {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 7px 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tab-btn:hover {
+  color: var(--text-primary);
+  border-color: #333;
+}
+
+.tab-btn.active {
+  color: #4caf50;
+  border-color: rgba(76,175,80,0.4);
+  background: rgba(76,175,80,0.08);
 }
 
 .toast-enter-active, .toast-leave-active { transition: all 0.3s ease; }

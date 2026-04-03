@@ -2,6 +2,8 @@ const express = require('express');
 const path = require('path');
 const cors = require('cors');
 const exercisesRouter = require('./routes/exercises');
+const templatesRouter = require('./routes/templates');
+const sessionsRouter = require('./routes/sessions');
 
 const app = express();
 const PORT = 3001;
@@ -11,6 +13,8 @@ app.use(express.json());
 
 // Serve API routes
 app.use('/api/exercises', exercisesRouter);
+app.use('/api/templates', templatesRouter);
+app.use('/api/sessions', sessionsRouter);
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
