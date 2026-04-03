@@ -5,6 +5,7 @@ import ExerciseCustomizer from './components/ExerciseCustomizer.vue'
 import ExerciseView from './components/ExerciseView.vue'
 import PracticeTemplates from './components/PracticeTemplates.vue'
 import PracticeJournal from './components/PracticeJournal.vue'
+import Lessons from './components/Lessons.vue'
 import { getExercises } from './services/api.js'
 
 const exercises = ref([])
@@ -112,6 +113,11 @@ onMounted(fetchExercises)
               :class="{ active: activeTab === 'journal' }"
               @click="switchTab('journal')"
             >📓 Journal</button>
+            <button
+              class="tab-btn"
+              :class="{ active: activeTab === 'lessons' }"
+              @click="switchTab('lessons')"
+            >📖 Lessons</button>
           </template>
         </nav>
       </div>
@@ -157,6 +163,11 @@ onMounted(fetchExercises)
       <!-- Journal Tab -->
       <PracticeJournal
         v-else-if="activeTab === 'journal'"
+      />
+
+      <!-- Lessons Tab -->
+      <Lessons
+        v-else-if="activeTab === 'lessons'"
       />
     </main>
 
