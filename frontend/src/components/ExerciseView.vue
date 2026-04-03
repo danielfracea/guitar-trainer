@@ -39,6 +39,13 @@ const SCALE_LABELS = {
 const STRING_MIDI   = [64, 59, 55, 50, 45, 40]
 const STRING_LABELS = ['e', 'B', 'G', 'D', 'A', 'E']
 const TYPE_LABELS   = { scale:'Scale', chords:'Chords', fingerpicking:'Fingerpicking', barre:'Barre' }
+const DURATION_OPTIONS = [
+  { label: 'Whole',   value: 4    },
+  { label: 'Half',    value: 2    },
+  { label: 'Quarter', value: 1    },
+  { label: 'Eighth',  value: 0.5  },
+  { label: '16th',    value: 0.25 },
+]
 
 // ── Box (position) navigation ─────────────────────────────────────────────────
 const boxStart = ref(0)
@@ -94,6 +101,7 @@ const tabData = computed(() => {
 let audioCtx      = null
 let schedulerTimer = null
 let nextBeatTime   = 0
+let _nextNoteTime  = 0
 let _beatIdx       = 0
 let _noteIdx       = 0
 
@@ -101,13 +109,30 @@ const isPlaying    = ref(false)
 const isMetronome  = ref(false)
 const currentNoteIdx = ref(-1)
 const beatCount    = ref(0)
-const volume       = ref(100)
+const metronomeVolume = ref(100)
+const scaleVolume  = ref(100)
 const localTempo   = ref(props.exercise.settings.tempo ?? 60)
+const noteDurations = ref([])
+const defaultNoteDuration = ref(1)
 
 watch(
   () => props.exercise.settings.tempo,
   t => { localTempo.value = t ?? 60 }
 )
+
+watch(tabData, (td) => {
+  if (td) {
+    const len = td.seq.length
+    if (noteDurations.value.length !== len) {
+      noteDurations.value = Array(len).fill(defaultNoteDuration.value)
+    }
+  }
+}, { immediate: true })
+
+function setAllDurations(val) {
+  defaultNoteDuration.value = val
+  noteDurations.value = Array(noteDurations.value.length).fill(val)
+}
 
 function getCtx() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)()
@@ -125,7 +150,7 @@ function emitClick(ctx, time, accent) {
   g.connect(ctx.destination)
   osc.type = 'sine'
   osc.frequency.value = accent ? 1400 : 900
-  const vol = volume.value / 100
+  const vol = metronomeVolume.value / 100
   g.gain.setValueAtTime((accent ? 0.5 : 0.25) * vol, time)
   g.gain.exponentialRampToValueAtTime(0.0001, time + 0.05)
   osc.start(time)
@@ -139,7 +164,7 @@ function emitTone(ctx, midi, time, dur) {
   g.connect(ctx.destination)
   osc.type = 'triangle'
   osc.frequency.value = midiToFreq(midi)
-  const vol = volume.value / 100
+  const vol = scaleVolume.value / 100
   g.gain.setValueAtTime(0.3 * vol, time)
   g.gain.setTargetAtTime(0, time + dur * 0.4, dur * 0.15)
   osc.start(time)
@@ -153,37 +178,49 @@ function schedule() {
   const beatDuration = 60 / localTempo.value
   const seq = tabData.value?.seq
 
-  // Schedule up to 200ms ahead — standard Web Audio lookahead to avoid gaps
+  // Schedule metronome ticks (beat-aligned)
+  // Standard Web Audio lookahead of 200ms to avoid gaps
   while (nextBeatTime < ctx.currentTime + 0.2) {
     const beatTime  = nextBeatTime
     const beatIndex = _beatIdx
-    const noteIndex = _noteIdx
     const delay = Math.max(0, (beatTime - ctx.currentTime) * 1000)
 
     if (isMetronome.value) emitClick(ctx, beatTime, beatIndex % 4 === 0)
-
-    if (isPlaying.value && seq && seq.length > 0) {
-      const note           = seq[noteIndex % seq.length]
-      const capturedNoteIdx = noteIndex % seq.length
-      emitTone(ctx, note.midi, beatTime, beatDuration * 0.75)
-      setTimeout(() => {
-        if (isPlaying.value) currentNoteIdx.value = capturedNoteIdx
-      }, delay)
-      _noteIdx++
-    }
 
     const capturedBeatIdx = beatIndex
     setTimeout(() => { beatCount.value = capturedBeatIdx }, delay)
     _beatIdx++
     nextBeatTime += beatDuration
   }
+
+  // Schedule scale notes (duration-aligned, independent of metronome ticks)
+  if (isPlaying.value && seq && seq.length > 0) {
+    while (_nextNoteTime < ctx.currentTime + 0.2) {
+      const noteTime = _nextNoteTime
+      const noteIndex = _noteIdx % seq.length
+      const note = seq[noteIndex]
+      const dur = noteDurations.value[noteIndex] ?? defaultNoteDuration.value
+      const toneDur = beatDuration * dur * 0.9
+      const delay = Math.max(0, (noteTime - ctx.currentTime) * 1000)
+
+      emitTone(ctx, note.midi, noteTime, toneDur)
+      const capturedNoteIdx = noteIndex
+      setTimeout(() => {
+        if (isPlaying.value) currentNoteIdx.value = capturedNoteIdx
+      }, delay)
+      _noteIdx++
+      _nextNoteTime += beatDuration * dur
+    }
+  }
 }
 
 function startEngine() {
   if (schedulerTimer) return
   const ctx = getCtx()
-  _beatIdx     = 0
-  nextBeatTime = ctx.currentTime + 0.05
+  _beatIdx      = 0
+  _noteIdx      = 0
+  nextBeatTime  = ctx.currentTime + 0.05
+  _nextNoteTime = ctx.currentTime + 0.05
   // Poll every 25ms — standard Web Audio scheduling interval for smooth playback
   schedulerTimer = setInterval(schedule, 25)
 }
@@ -211,6 +248,7 @@ function togglePlay() {
     if (!isMetronome.value) stopEngine()
   } else {
     _noteIdx = 0
+    _nextNoteTime = audioCtx ? audioCtx.currentTime + 0.05 : 0
     isPlaying.value = true
     startEngine()
   }
@@ -337,6 +375,27 @@ onUnmounted(() => {
       </div>
     </div>
 
+    <!-- Note durations (scale exercises) -->
+    <div v-if="tabData" class="view-card">
+      <div class="section-header">
+        <h3 class="section-title">Note Durations</h3>
+        <div class="duration-all-ctrl">
+          <label class="slider-label">Set All</label>
+          <select :value="defaultNoteDuration" @change="setAllDurations(+$event.target.value)" class="duration-select-all">
+            <option v-for="d in DURATION_OPTIONS" :key="d.value" :value="d.value">{{ d.label }}</option>
+          </select>
+        </div>
+      </div>
+      <div class="duration-notes-row">
+        <div v-for="(note, i) in tabData.seq" :key="i" class="duration-note-item">
+          <span class="duration-note-name">{{ midiToName(note.midi) }}</span>
+          <select :value="noteDurations[i]" @change="noteDurations[i] = +$event.target.value" class="duration-select">
+            <option v-for="d in DURATION_OPTIONS" :key="d.value" :value="d.value">{{ d.label }}</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
     <!-- Chord sequence display -->
     <div v-else-if="exercise.type === 'chords'" class="view-card">
       <h3 class="section-title" style="margin-bottom:16px">Chord Sequence</h3>
@@ -437,9 +496,14 @@ onUnmounted(() => {
           <span class="slider-value">{{ localTempo }} BPM</span>
         </div>
         <div class="slider-group">
-          <label for="volume-slider" class="slider-label">Volume</label>
-          <input id="volume-slider" type="range" v-model.number="volume" min="0" max="100" step="1" class="ctrl-slider" />
-          <span class="slider-value">{{ volume }}%</span>
+          <label for="metronome-vol-slider" class="slider-label">Metronome</label>
+          <input id="metronome-vol-slider" type="range" v-model.number="metronomeVolume" min="0" max="100" step="1" class="ctrl-slider" />
+          <span class="slider-value">{{ metronomeVolume }}%</span>
+        </div>
+        <div class="slider-group">
+          <label for="scale-vol-slider" class="slider-label">Scale</label>
+          <input id="scale-vol-slider" type="range" v-model.number="scaleVolume" min="0" max="100" step="1" class="ctrl-slider" />
+          <span class="slider-value">{{ scaleVolume }}%</span>
         </div>
       </div>
     </div>
@@ -841,5 +905,53 @@ onUnmounted(() => {
   color: var(--accent-amber);
   min-width: 60px;
   text-align: right;
+}
+
+/* ── Note durations ── */
+.duration-all-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.duration-select-all {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-accent);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  padding: 4px 8px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.duration-notes-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.duration-note-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
+  min-width: 52px;
+}
+.duration-note-name {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.duration-select {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-accent);
+  border-radius: 4px;
+  color: var(--accent-amber);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 4px;
+  cursor: pointer;
+  width: 100%;
 }
 </style>
