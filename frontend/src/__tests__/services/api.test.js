@@ -27,6 +27,11 @@ import {
   createSession,
   updateSession,
   deleteSession,
+  getTablatures,
+  getTablature,
+  createTablature,
+  updateTablature,
+  deleteTablature,
 } from '../../services/api.js';
 
 const mockApi = axios.create();
@@ -91,6 +96,38 @@ describe('api service', () => {
     mockApi.delete.mockResolvedValue({ data: { success: true } });
     await deleteSession(7);
     expect(mockApi.delete).toHaveBeenCalledWith('/sessions/7');
+  });
+
+  it('getTablatures calls GET /tablatures', async () => {
+    mockApi.get.mockResolvedValue({ data: [] });
+    await getTablatures();
+    expect(mockApi.get).toHaveBeenCalledWith('/tablatures');
+  });
+
+  it('getTablature calls GET /tablatures/:id', async () => {
+    mockApi.get.mockResolvedValue({ data: {} });
+    await getTablature(1);
+    expect(mockApi.get).toHaveBeenCalledWith('/tablatures/1');
+  });
+
+  it('createTablature calls POST /tablatures with data', async () => {
+    mockApi.post.mockResolvedValue({ data: { id: 1 } });
+    const payload = { name: 'My Tab', timeSignature: { numerator: 4, denominator: 4 }, bars: [] };
+    await createTablature(payload);
+    expect(mockApi.post).toHaveBeenCalledWith('/tablatures', payload);
+  });
+
+  it('updateTablature calls PUT /tablatures/:id with data', async () => {
+    mockApi.put.mockResolvedValue({ data: {} });
+    const payload = { name: 'Updated' };
+    await updateTablature(3, payload);
+    expect(mockApi.put).toHaveBeenCalledWith('/tablatures/3', payload);
+  });
+
+  it('deleteTablature calls DELETE /tablatures/:id', async () => {
+    mockApi.delete.mockResolvedValue({ data: { success: true } });
+    await deleteTablature(2);
+    expect(mockApi.delete).toHaveBeenCalledWith('/tablatures/2');
   });
 
   it('axios.create was called once during module initialization', async () => {

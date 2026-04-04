@@ -4,6 +4,7 @@ const cors = require('cors');
 const exercisesRouter = require('./routes/exercises');
 const templatesRouter = require('./routes/templates');
 const sessionsRouter = require('./routes/sessions');
+const tablaturesRouter = require('./routes/tablatures');
 
 const app = express();
 const PORT = 3001;
@@ -15,6 +16,7 @@ app.use(express.json());
 app.use('/api/exercises', exercisesRouter);
 app.use('/api/templates', templatesRouter);
 app.use('/api/sessions', sessionsRouter);
+app.use('/api/tablatures', tablaturesRouter);
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
