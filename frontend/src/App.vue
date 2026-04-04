@@ -6,6 +6,7 @@ import ExerciseView from './components/ExerciseView.vue'
 import PracticeTemplates from './components/PracticeTemplates.vue'
 import PracticeJournal from './components/PracticeJournal.vue'
 import Lessons from './components/Lessons.vue'
+import GuitarTablature from './components/GuitarTablature.vue'
 import { getExercises } from './services/api.js'
 
 const exercises = ref([])
@@ -118,6 +119,11 @@ onMounted(fetchExercises)
               :class="{ active: activeTab === 'lessons' }"
               @click="switchTab('lessons')"
             >📖 Lessons</button>
+            <button
+              class="tab-btn"
+              :class="{ active: activeTab === 'tablature' }"
+              @click="switchTab('tablature')"
+            >🎵 Tablature</button>
           </template>
         </nav>
       </div>
@@ -168,6 +174,11 @@ onMounted(fetchExercises)
       <!-- Lessons Tab -->
       <Lessons
         v-else-if="activeTab === 'lessons'"
+      />
+
+      <!-- Tablature Tab -->
+      <GuitarTablature
+        v-else-if="activeTab === 'tablature'"
       />
     </main>
 
