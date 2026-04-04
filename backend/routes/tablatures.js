@@ -9,8 +9,8 @@ const VALID_DENOMINATORS = [2, 4, 8, 16];
 function validateTimeSignature(ts) {
   if (!ts || typeof ts !== 'object') return 'timeSignature must be an object';
   const { numerator, denominator } = ts;
-  if (!Number.isInteger(numerator) || numerator < 1 || numerator > 16)
-    return 'timeSignature.numerator must be an integer between 1 and 16';
+  if (!Number.isInteger(numerator) || numerator < 1 || numerator > 12)
+    return 'timeSignature.numerator must be an integer between 1 and 12';
   if (!VALID_DENOMINATORS.includes(denominator))
     return 'timeSignature.denominator must be one of 2, 4, 8, 16';
   return null;

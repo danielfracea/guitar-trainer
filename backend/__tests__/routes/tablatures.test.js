@@ -143,10 +143,10 @@ describe('POST /tablatures', () => {
     expect(res.status).toBe(400);
   });
 
-  test('returns 400 for invalid numerator (17)', async () => {
+  test('returns 400 for invalid numerator (13)', async () => {
     const res = await request(app).post('/tablatures').send({
       name: 'Bad',
-      timeSignature: { numerator: 17, denominator: 4 },
+      timeSignature: { numerator: 13, denominator: 4 },
     });
     expect(res.status).toBe(400);
   });

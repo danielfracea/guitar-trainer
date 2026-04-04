@@ -14,7 +14,9 @@ import {
   resizeBars,
   generateAsciiTab,
 } from '../utils/tablature.js'
+
 const DENOMINATORS = [2, 4, 8, 16]
+const NUMERATORS = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 
 // ── State ────────────────────────────────────────────────────────────────────
 const savedTabs = ref([])
@@ -135,7 +137,11 @@ function downloadTab() {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `${(tabName.value || 'tab').replace(/\s+/g, '_')}.txt`
+  const safeName = (tabName.value || 'tab')
+    .replace(/[/\\:*?"<>|]/g, '')
+    .replace(/\s+/g, '_')
+    .slice(0, 100) || 'tab'
+  a.download = `${safeName}.txt`
   a.click()
   URL.revokeObjectURL(url)
 }
@@ -196,7 +202,7 @@ onMounted(() => {
           <div class="ts-group">
             <label class="ts-label">Time</label>
             <select v-model.number="numerator" class="select ts-select" @change="onNumeratorChange">
-              <option v-for="n in [2,3,4,5,6,7,8,9,10,11,12]" :key="n" :value="n">{{ n }}</option>
+              <option v-for="n in NUMERATORS" :key="n" :value="n">{{ n }}</option>
             </select>
             <span class="ts-slash">/</span>
             <select v-model.number="denominator" class="select ts-select">
