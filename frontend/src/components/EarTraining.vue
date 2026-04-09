@@ -111,11 +111,19 @@ function getRandomItem(arr) {
   return arr[Math.floor(Math.random() * arr.length)]
 }
 
+function fisherYates(arr) {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
 function shuffledChoices(correctInterval) {
-  const pool = [...INTERVALS]
-  const others = pool.filter(i => i.name !== correctInterval.name)
-  const shuffled = others.sort(() => Math.random() - 0.5).slice(0, 3)
-  return [...shuffled, correctInterval].sort(() => Math.random() - 0.5)
+  const others = INTERVALS.filter(i => i.name !== correctInterval.name)
+  const shuffled = fisherYates(others).slice(0, 3)
+  return fisherYates([...shuffled, correctInterval])
 }
 
 function newIntervalQuestion() {
@@ -163,8 +171,8 @@ const chordFeedback = ref(null)
 
 function shuffledChordChoices(correctQuality) {
   const others = CHORD_QUALITIES.filter(q => q.name !== correctQuality.name)
-  const shuffled = others.sort(() => Math.random() - 0.5).slice(0, 3)
-  return [...shuffled, correctQuality].sort(() => Math.random() - 0.5)
+  const shuffled = fisherYates(others).slice(0, 3)
+  return fisherYates([...shuffled, correctQuality])
 }
 
 function newChordQuestion() {
@@ -214,8 +222,8 @@ const rhythmActiveBeat = ref(-1)
 
 function shuffledRhythmChoices(correct) {
   const others = RHYTHM_PATTERNS.filter(p => p.name !== correct.name)
-  const shuffled = others.sort(() => Math.random() - 0.5).slice(0, 2)
-  return [...shuffled, correct].sort(() => Math.random() - 0.5)
+  const shuffled = fisherYates(others).slice(0, 2)
+  return fisherYates([...shuffled, correct])
 }
 
 function newRhythmQuestion() {
@@ -279,9 +287,8 @@ const noteFeedback = ref(null)
 
 function shuffledNoteChoices(correctSemitone) {
   const others = Array.from({ length: 12 }, (_, i) => i).filter(i => i !== correctSemitone)
-  const shuffled = others.sort(() => Math.random() - 0.5).slice(0, 3)
-  return [...shuffled, correctSemitone]
-    .sort(() => Math.random() - 0.5)
+  const shuffled = fisherYates(others).slice(0, 3)
+  return fisherYates([...shuffled, correctSemitone])
     .map(s => ({ semitone: s, name: NOTE_NAMES[s] }))
 }
 
