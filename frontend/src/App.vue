@@ -7,6 +7,7 @@ import PracticeTemplates from './components/PracticeTemplates.vue'
 import PracticeJournal from './components/PracticeJournal.vue'
 import Lessons from './components/Lessons.vue'
 import GuitarTablature from './components/GuitarTablature.vue'
+import EarTraining from './components/EarTraining.vue'
 import { getExercises } from './services/api.js'
 
 const exercises = ref([])
@@ -124,6 +125,11 @@ onMounted(fetchExercises)
               :class="{ active: activeTab === 'tablature' }"
               @click="switchTab('tablature')"
             >🎵 Tablature</button>
+            <button
+              class="tab-btn"
+              :class="{ active: activeTab === 'ear-training' }"
+              @click="switchTab('ear-training')"
+            >👂 Ear Training</button>
           </template>
         </nav>
       </div>
@@ -179,6 +185,11 @@ onMounted(fetchExercises)
       <!-- Tablature Tab -->
       <GuitarTablature
         v-else-if="activeTab === 'tablature'"
+      />
+
+      <!-- Ear Training Tab -->
+      <EarTraining
+        v-else-if="activeTab === 'ear-training'"
       />
     </main>
 
